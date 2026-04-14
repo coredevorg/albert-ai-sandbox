@@ -173,6 +173,27 @@ APT::Periodic::AutocleanInterval "7";
 AU
 systemctl enable --now unattended-upgrades >/dev/null
 
+# --- Step h: ALBERT_PUBLIC_URL drop-in -------------------------------------
+# Make the public FQDN available to the manager service so REST responses
+# carry https://<fqdn>/... URLs instead of http://<ip>/... . install.sh
+# doesn't know the FQDN, so we place the override here as a systemd drop-in.
+say "Configuring ALBERT_PUBLIC_URL for manager service..."
+DROPIN_DIR="/etc/systemd/system/albert-container-manager.service.d"
+DROPIN_FILE="${DROPIN_DIR}/public-url.conf"
+mkdir -p "$DROPIN_DIR"
+backup "$DROPIN_FILE"
+cat > "$DROPIN_FILE" <<EOF
+[Service]
+Environment=ALBERT_PUBLIC_URL=https://${FQDN}
+EOF
+systemctl daemon-reload
+if systemctl is-active --quiet albert-container-manager.service; then
+	systemctl restart albert-container-manager.service
+	say "Restarted albert-container-manager with ALBERT_PUBLIC_URL=https://${FQDN}"
+else
+	say "albert-container-manager not active yet; drop-in will take effect on next start."
+fi
+
 # --- Summary ---------------------------------------------------------------
 say "============================================================"
 say "Host hardening complete."
