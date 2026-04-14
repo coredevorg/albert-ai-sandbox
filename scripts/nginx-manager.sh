@@ -182,7 +182,9 @@ _ensure_include_and_reload() {
     nginx -t && systemctl reload nginx
 }
 
-# Internal: ensure exactly one include line exists after server_name _;
+# Internal: ensure the albert include line is present in every relevant
+# server block (default '_' block and any certbot-managed TLS block). This
+# mirrors the logic in install.sh so per-container nginx writes stay in sync.
 _ensure_single_include_line() {
     local file_path="$1"
     local include_line="$2"
@@ -192,36 +194,42 @@ _ensure_single_include_line() {
     sed -i '/# ALBERT Sandbox Configs/d' "$file_path"
     sed -i '/include .*albert-\*.conf;/d' "$file_path"
 
-    # Insert once after server_name _; using awk to avoid sed escape quirks
+    # Insert after every matching server_name line.
     awk -v inc_line="$include_line" '
-        BEGIN { inserted=0 }
         {
             print $0
-            if (!inserted && $0 ~ /server_name[[:space:]]+_;/) {
+            if ($0 ~ /server_name[[:space:]]+_;/ || $0 ~ /server_name[[:space:]].*managed by Certbot/) {
                 print "\t# Albert Sandbox Configs"
                 print "\t" inc_line
-                inserted=1
             }
         }
     ' "$file_path" > "${file_path}.tmp" && mv "${file_path}.tmp" "$file_path"
 }
 
-# Tidies duplicate include lines in default site
+# Tidies include lines in the default site. After every operation we expect
+# exactly one include per target server block (1 for plain HTTP, 2 once TLS
+# is enabled). Only rewrite if the count diverges from that target. Warnings
+# are written to stderr so they do not contaminate JSON stdout consumed by
+# container_manager_service.
 cleanup_nginx_includes() {
     local config_file="${NGINX_ENABLED_DIR}/default"
-    # Generic regex pattern to match any albert-*.conf include lines
     local pattern='include .*albert-\*.conf;'
 
-    local count=$(grep -c "$pattern" "$config_file" 2>/dev/null || echo 0)
-    if [ "$count" -gt 1 ]; then
-        echo -e "${YELLOW}Cleaning up duplicate nginx includes (found: $count)...${NC}"
-        cp "$config_file" "${config_file}.backup.$(date +%Y%m%d_%H%M%S)"
-        # Remove all our include markers/lines
-        sed -i '/# Albert Sandbox Configs/d' "$config_file"
-        sed -i '/# ALBERT Sandbox Configs/d' "$config_file"
-        sed -i "/$pattern/d" "$config_file"
-        # Add a single include line back using helper
-        _ensure_single_include_line "$config_file" "include ${NGINX_CONF_DIR}/albert-*.conf;"
-        echo -e "${GREEN}✓ Nginx includes cleaned up${NC}"
+    local count
+    count=$(grep -c "$pattern" "$config_file" 2>/dev/null || echo 0)
+    local target
+    target=$(grep -cE 'server_name[[:space:]]+_;|server_name[[:space:]].*managed by Certbot' "$config_file" 2>/dev/null || echo 0)
+
+    if [ "$target" -eq 0 ]; then
+        return 0
     fi
+    if [ "$count" -eq "$target" ]; then
+        return 0
+    fi
+    echo "Reconciling nginx includes (have=$count, want=$target)..." >&2
+    # Never place backups inside sites-enabled: nginx globs that directory.
+    local backup_dir="/opt/albert-ai-sandbox-manager/nginx/backups"
+    mkdir -p "$backup_dir"
+    cp "$config_file" "$backup_dir/default.backup.$(date +%Y%m%d_%H%M%S)"
+    _ensure_single_include_line "$config_file" "include ${NGINX_CONF_DIR}/albert-*.conf;"
 }
