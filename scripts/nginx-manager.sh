@@ -13,13 +13,22 @@ create_nginx_config() {
     local novnc_port="$2"
     local mcphub_port="${3:-}"
     local filesvc_port="${4:-}"
+    local vnc_password="${5:-}"
 
     local cfg="${NGINX_CONF_DIR}/albert-${container_name}.conf"
+
+    # URL-encode the VNC password for safe inclusion in the redirect query string.
+    local vnc_password_enc
+    if [ -n "$vnc_password" ] && command -v python3 >/dev/null 2>&1; then
+        vnc_password_enc=$(VNC_PW="$vnc_password" python3 -c 'import os,urllib.parse;print(urllib.parse.quote(os.environ["VNC_PW"],safe=""))')
+    else
+        vnc_password_enc="$vnc_password"
+    fi
 
     cat > "$cfg" <<EOF
 # Auto-redirect to noVNC with correct websocket path
 location = /${container_name}/ {
-    return 301 /${container_name}/vnc.html?path=${container_name}/websockify&password=albert&autoconnect=true&resize=scale;
+    return 301 /${container_name}/vnc.html?path=${container_name}/websockify&password=${vnc_password_enc}&autoconnect=true&resize=scale;
 }
 
 # Main proxy for noVNC interface
