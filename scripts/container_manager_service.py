@@ -161,6 +161,11 @@ def _extract_script_metadata(payload: Any) -> Dict[str, Any]:
         result["status"] = status
     if "persistent" in payload:
         result["persistent"] = payload["persistent"]
+    # Per-container secrets (only present in create responses)
+    if payload.get("vncPassword"):
+        result["vncPassword"] = payload["vncPassword"]
+    if payload.get("fileServiceToken"):
+        result["fileServiceToken"] = payload["fileServiceToken"]
     return result
 
 # --- Database helpers ------------------------------------------------------
