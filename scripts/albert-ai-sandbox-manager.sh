@@ -295,16 +295,19 @@ PY
 
 lookup_api_key_id_python() {
 	local hash="$1"
-	python3 - <<PY 2>/dev/null || true
+	# Pass lookup hash as env var to avoid shell-to-python string interpolation.
+	# Quoted heredoc ('PY') prevents bash variable expansion inside the heredoc body.
+	LOOKUP_HASH="$hash" python3 - <<'PY' 2>/dev/null || true
 import sqlite3, os
-db=os.environ.get('DB_PATH')
+db = os.environ.get('DB_PATH')
+lookup_hash = os.environ.get('LOOKUP_HASH', '')
 if not db or not os.path.exists(db):
-		print("")
-		raise SystemExit
-con=sqlite3.connect(db)
-cur=con.cursor()
-cur.execute("SELECT id FROM api_keys WHERE key_hash=? LIMIT 1", ("$hash",))
-r=cur.fetchone()
+    print("")
+    raise SystemExit
+con = sqlite3.connect(db)
+cur = con.cursor()
+cur.execute("SELECT id FROM api_keys WHERE key_hash=? LIMIT 1", (lookup_hash,))
+r = cur.fetchone()
 print(r[0] if r else "")
 con.close()
 PY
