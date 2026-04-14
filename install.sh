@@ -240,6 +240,7 @@ ExecStart=/usr/bin/env bash -c '[ -x /opt/albert-ai-sandbox-manager/venv/bin/pyt
 Restart=on-failure
 RestartSec=5
 Environment=MANAGER_PORT=5001
+Environment=MANAGER_BIND_HOST=127.0.0.1
 Environment=MANAGER_DB_PATH=/opt/albert-ai-sandbox-manager/data/manager.db
 Environment=MANAGER_DATA_DIR=/opt/albert-ai-sandbox-manager/data/containers
 # Optional: restrict privileges a bit (comment out if causing issues)
@@ -304,7 +305,11 @@ if [ ! -f "$MANAGER_NGX_CONF" ]; then
 cat > "$MANAGER_NGX_CONF" <<'EOF'
 # Reverse proxy for ALBERT Container Manager REST API
 location /manager/ {
-	proxy_pass http://localhost:5001/;
+	# Rate-limit: zone defined in /etc/nginx/conf.d/albert-security.conf
+	# (setup-tls.sh installs it). If the zone is missing, nginx -t will fail;
+	# make sure setup-tls.sh ran before reloading nginx.
+	limit_req zone=albert_manager burst=20 nodelay;
+	proxy_pass http://127.0.0.1:5001/;
 	proxy_http_version 1.1;
 	proxy_set_header Upgrade $http_upgrade;
 	proxy_set_header Connection "upgrade";
