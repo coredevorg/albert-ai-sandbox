@@ -868,12 +868,13 @@ start_container() {
 			fi
 			return 1
 		fi
+		local base
+		base=$(public_base_url)
 		if [ -n "$JSON_MODE" ]; then
-			local hostip=$(hostname -I | awk '{print $1}')
-			json_emit '{result:"started", name:$n, url:($h+"/"+$n+"/"), host:$h}' --arg n "$name" --arg h "http://$hostip"
+			json_emit '{result:"started", name:$n, url:($h+"/"+$n+"/"), host:$h}' --arg n "$name" --arg h "$base"
 		elif [ -z "$QUIET" ]; then
 			echo -e "${GREEN}Container '$name' started${NC}"
-			echo -e "${GREEN}URL: http://$(hostname -I | awk '{print $1}')/${name}/${NC}"
+			echo -e "${GREEN}URL: ${base}/${name}/${NC}"
 		fi
         else
                 if [ -n "$JSON_MODE" ]; then
@@ -1034,7 +1035,8 @@ show_single_status() {
 			stats=""
 		fi
 	fi
-	local hostip=$(hostname -I | awk '{print $1}')
+	local base
+	base=$(public_base_url)
         if [ "$mode" = "json" ] || [ -n "$JSON_MODE" ]; then
                 jq -n \
                         --arg name "$name" \
@@ -1047,8 +1049,8 @@ show_single_status() {
 			--arg filesvc "$filesvc_port" \
 			--arg stats "$stats" \
 			--arg ownerHash "$OWNER_KEY_HASH_ENV" \
-			--arg host "$hostip" \
-                        '{name:$name,status:$status,created:$created,persistent:$persistent,ownerHash:$ownerHash,ports:{novnc:$novnc,vnc:$vnc,mcphub:$mcphub,filesvc:$filesvc},resources:$stats,urls:{desktop:("http://"+$host+"/"+$name+"/"), mcphub:("http://"+$host+"/"+$name+"/mcphub/mcp"), files:("http://"+$host+"/"+$name+"/files/")}}'
+			--arg host "$base" \
+                        '{name:$name,status:$status,created:$created,persistent:$persistent,ownerHash:$ownerHash,ports:{novnc:$novnc,vnc:$vnc,mcphub:$mcphub,filesvc:$filesvc},resources:$stats,urls:{desktop:($host+"/"+$name+"/"), mcphub:($host+"/"+$name+"/mcphub/mcp"), files:($host+"/"+$name+"/files/")}}'
                 __ALBERT_JSON_EMITTED=1
         else
                 echo -e "${BLUE}Container: ${NC}$name"
@@ -1062,7 +1064,7 @@ show_single_status() {
 		else
 			echo -e "${BLUE}Docker Status: ${RED}Stopped${NC}"
 		fi
-		echo -e "${BLUE}URL: ${NC}http://${hostip}/${name}/"
+		echo -e "${BLUE}URL: ${NC}${base}/${name}/"
 	fi
 }
 
