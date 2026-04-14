@@ -55,6 +55,7 @@ DEFAULT_DATA_DIR = BASE_DIR / "data" / "containers"
 
 # Configuration
 PORT = int(os.environ.get("MANAGER_PORT", "5001"))
+BIND_HOST = os.environ.get("MANAGER_BIND_HOST", "127.0.0.1")
 DB_PATH = os.environ.get("MANAGER_DB_PATH", str(DEFAULT_DB_PATH))
 DATA_DIR = os.environ.get("MANAGER_DATA_DIR", str(DEFAULT_DATA_DIR))
 ALLOWED_IMAGES = [i.strip() for i in os.environ.get("MANAGER_ALLOWED_IMAGES", "").split(",") if i.strip()] or None
@@ -306,6 +307,9 @@ def not_found(e):  # pragma: no cover (simple wrapper)
 
 @app.get("/health")
 def health():
+    _, err = require_api_key()
+    if err:
+        return err
     docker_status = "up" if docker_info_available() else "down"
     return jsonify({"status": "ok", "docker": docker_status})
 
@@ -476,7 +480,7 @@ def delete_container(cid: str):
 # --- Main ------------------------------------------------------------------
 
 def main():
-    app.run(host="0.0.0.0", port=PORT)
+    app.run(host=BIND_HOST, port=PORT)
 
 if __name__ == "__main__":
     main()
