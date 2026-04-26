@@ -249,6 +249,12 @@ ExecStart=/usr/bin/env bash -c '[ -x /opt/albert-ai-sandbox-manager/venv/bin/pyt
 Restart=on-failure
 RestartSec=5
 Environment=MANAGER_PORT=5001
+# Bind only to loopback so the manager API is reachable exclusively via the
+# nginx /manager/ reverse proxy (TLS, rate limit, access log). To expose it
+# directly on a different interface, override with a drop-in:
+#   /etc/systemd/system/albert-container-manager.service.d/bind.conf
+#   [Service]
+#   Environment=MANAGER_BIND_HOST=0.0.0.0
 Environment=MANAGER_BIND_HOST=127.0.0.1
 Environment=MANAGER_DB_PATH=/opt/albert-ai-sandbox-manager/data/manager.db
 Environment=MANAGER_DATA_DIR=/opt/albert-ai-sandbox-manager/data/containers
