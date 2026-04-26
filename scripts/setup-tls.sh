@@ -5,8 +5,8 @@
 # Run ONCE per host as root, before/after install.sh. Idempotent: every step
 # is safe to re-run. Reads FQDN and ADMIN_EMAIL from arguments or environment.
 #
-#   sudo FQDN=sandbox-1.novista.ch ADMIN_EMAIL=admin@novista.ch bash setup-tls.sh
-#   sudo bash setup-tls.sh --fqdn sandbox-1.novista.ch --email admin@novista.ch
+#   sudo FQDN=sandbox.host.domain ADMIN_EMAIL=admin@host.domain bash setup-tls.sh
+#   sudo bash setup-tls.sh --fqdn sandbox.host.domain --email admin@host.domain
 #
 # The script deliberately does NOT start or modify the albert-container-manager
 # service. Run install.sh after this script finishes.

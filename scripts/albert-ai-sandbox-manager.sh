@@ -41,7 +41,7 @@ resolve_db_path
 export DB_PATH  # ensure python heredocs can read it
 
 # Returns the public base URL used in API responses and banner output.
-# - If ALBERT_PUBLIC_URL is set (e.g. https://sandbox-1.novista.ch), it is
+# - If ALBERT_PUBLIC_URL is set (e.g. https://sandbox.host.domain), it is
 #   returned verbatim with a trailing slash stripped so concatenations like
 #   "$base/$name/" stay clean.
 # - Otherwise we fall back to the legacy behaviour: http:// + primary IPv4
